@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Sleep Tracker</string>
+    <string name="sleep_tracker">Sleep Tracker</string>
+    <string name="show_sleep_records">Show Sleep Records</string>
+    <string name="show_raw_data">Show Raw Data</string>
+    <string name="awake_time">Awake time:</string>
+    <string name="sleep_time">Sleep time:</string>
+    <string name="wipe_data">Wipe Data</string>
+    <string name="show_log">Show Log</string>
+</resources>
