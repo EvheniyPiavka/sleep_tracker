@@ -16,4 +16,7 @@ interface SleepClassifyEventDao {
 
     @Query("SELECT * FROM SleepClassifyEventEntity")
     fun getAllEventsFlow(): Flow<List<SleepClassifyEventEntity>>
+
+    @Query("DELETE FROM SleepClassifyEventEntity")
+    suspend fun clear()
 }

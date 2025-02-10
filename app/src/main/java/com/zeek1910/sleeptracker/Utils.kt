@@ -18,11 +18,4 @@ object Utils {
         val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
         return sdf.format(date)
     }
-
-    fun millisToTimeString(millis: Long): String {
-        val hours = millis / 3600000
-        val minutes = (millis % 3600000) / 60000
-        val seconds = (millis % 60000) / 1000
-        return String.format("%02d:%02d:%02d", hours, minutes, seconds)
-    }
 }

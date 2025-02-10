@@ -8,8 +8,10 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.zeek1910.sleeptracker.Logger
 import com.zeek1910.sleeptracker.R
 import com.zeek1910.sleeptracker.db.AppDatabase
+import com.zeek1910.sleeptracker.worker.ProcessSleepDataWorker
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 
@@ -31,6 +33,15 @@ class SleepRecordsActivity : AppCompatActivity() {
 
         AppDatabase.getDatabase(this).sleepSegmentEventDao().getAllEventsFlow()
             .onEach { sleepEvents -> sleepAdapter.setItems(sleepEvents) }
+            .launchIn(lifecycleScope)
+
+
+    }
+
+    override fun onResume() {
+        super.onResume()
+        ProcessSleepDataWorker.start(this)
+            .onEach { Logger.log(it.toString()) }
             .launchIn(lifecycleScope)
     }
 }

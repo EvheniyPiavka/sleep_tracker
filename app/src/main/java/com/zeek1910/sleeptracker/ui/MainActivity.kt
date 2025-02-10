@@ -1,10 +1,13 @@
 package com.zeek1910.sleeptracker.ui
 
 import android.Manifest
-import android.app.TimePickerDialog
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
 import android.widget.Button
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -15,13 +18,14 @@ import androidx.core.app.ActivityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
-import com.zeek1910.sleeptracker.AppSettings
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.zeek1910.sleeptracker.R
 import com.zeek1910.sleeptracker.db.AppDatabase
-import com.zeek1910.sleeptracker.receiver.SleepReceiver
 import com.zeek1910.sleeptracker.worker.StartSleepTrackingWorker
-import com.zeek1910.sleeptracker.worker.StopSleepTrackerWorker
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -52,8 +56,6 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        val appSettings = AppSettings.getInstance(this)
-
         findViewById<Button>(R.id.showSleepRecordsButton).setOnClickListener {
             startActivity(Intent(this, SleepRecordsActivity::class.java))
         }
@@ -62,9 +64,14 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, RawDataActivity::class.java))
         }
 
-        findViewById<Button>(R.id.showLogButton).setOnClickListener {
-            startActivity(Intent(this, LogActivity::class.java))
-        }
+        val logAdapter = LogAdapter()
+        val recyclerView = findViewById<RecyclerView>(R.id.recyclerView)
+        recyclerView.adapter = logAdapter
+        recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
+
+        AppDatabase.getDatabase(this).logEventDao().getEventsFlow()
+            .onEach { events -> logAdapter.setItems(events) }
+            .launchIn(lifecycleScope)
 
         findViewById<Button>(R.id.wipeDataButton).setOnClickListener {
             AlertDialog.Builder(this)
@@ -84,45 +91,8 @@ class MainActivity : AppCompatActivity() {
                 .show()
         }
 
-        val awakeTimeButton = findViewById<Button>(R.id.awakeTime)
-        val sleepTimeButton = findViewById<Button>(R.id.sleepTime)
-        updateButtonTime(awakeTimeButton, appSettings.awakeTime)
-        updateButtonTime(sleepTimeButton, appSettings.sleepTime)
-
-        awakeTimeButton.setOnClickListener {
-            val awakeTime = appSettings.awakeTime
-            val timePickerDialog = TimePickerDialog(this, { _, hourOfDay, minute ->
-                val newAwakeTime = Pair(hourOfDay, minute)
-                appSettings.awakeTime = newAwakeTime
-                rescheduleStopSleepTracking()
-                updateButtonTime(awakeTimeButton, newAwakeTime)
-            }, awakeTime.first, awakeTime.second, true)
-            timePickerDialog.show()
-        }
-
-        sleepTimeButton.setOnClickListener {
-            val sleepTime = appSettings.sleepTime
-            val timePickerDialog = TimePickerDialog(this, { _, hourOfDay, minute ->
-                val newSleepTime = Pair(hourOfDay, minute)
-                appSettings.sleepTime = newSleepTime
-                rescheduleStartSleepTracking()
-                updateButtonTime(sleepTimeButton, appSettings.sleepTime)
-            }, sleepTime.first, sleepTime.second, true)
-            timePickerDialog.show()
-        }
-
         rescheduleSleepTracking()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        SleepReceiver.checkAndValidateLastSleep()
-    }
-
-    private fun updateButtonTime(button: Button, time: Pair<Int, Int>) {
-        val h = time.first.toString().padStart(2, '0')
-        val m = time.second.toString().padStart(2, '0')
-        button.text = "$h:$m"
+        checkBatteryOptimization()
     }
 
     private fun rescheduleSleepTracking() {
@@ -134,17 +104,22 @@ class MainActivity : AppCompatActivity() {
             requestActivityRecognitionPermission.launch(Manifest.permission.ACTIVITY_RECOGNITION)
             return
         }
-        rescheduleStartSleepTracking()
-        rescheduleStopSleepTracking()
+        StartSleepTrackingWorker.scheduleRestartSleepTracking(this)
     }
 
-    private fun rescheduleStartSleepTracking() {
-        val sleepTime = AppSettings.getInstance(this).sleepTime
-        StartSleepTrackingWorker.scheduleStartSleepTracking(this, sleepTime.first, sleepTime.second)
-    }
-
-    private fun rescheduleStopSleepTracking() {
-        val awakeTime = AppSettings.getInstance(this).awakeTime
-        StopSleepTrackerWorker.scheduleStopSleepTracking(this, awakeTime.first, awakeTime.second)
+    @SuppressLint("BatteryLife")
+    private fun checkBatteryOptimization() {
+        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+        if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
+            val intentSettings = Intent(ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+            with(intentSettings) {
+                data = Uri.fromParts("package", packageName, null)
+                addCategory(Intent.CATEGORY_DEFAULT)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY)
+                addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
+            }
+            startActivity(intentSettings)
+        }
     }
 }
