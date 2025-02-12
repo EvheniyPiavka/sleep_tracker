@@ -33,7 +33,8 @@ class SleepReceiver : BroadcastReceiver(),
                             timestampMillis = event.timestampMillis,
                             motion = event.motion,
                             light = event.light,
-                            confidence = event.confidence
+                            confidence = event.confidence,
+                            isProcessed = false
                         )
                     )
                 }
@@ -63,7 +64,6 @@ class SleepReceiver : BroadcastReceiver(),
             }
             val pendingIntent = getPendingIntent(context)
             val client = ActivityRecognition.getClient(context)
-            client.removeSleepSegmentUpdates(pendingIntent)
             client.requestSleepSegmentUpdates(
                 pendingIntent,
                 SleepSegmentRequest.getDefaultSleepSegmentRequest()

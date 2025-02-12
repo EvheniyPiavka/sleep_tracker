@@ -10,4 +10,5 @@ data class SleepClassifyEventEntity(
     val motion: Int,
     val light: Int,
     val confidence: Int,
+    val isProcessed : Boolean
 )

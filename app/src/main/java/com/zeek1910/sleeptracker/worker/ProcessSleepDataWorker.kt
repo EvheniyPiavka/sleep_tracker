@@ -25,7 +25,7 @@ class ProcessSleepDataWorker(appContext: Context, params: WorkerParameters) :
     }
 
     private suspend fun processSleepData() {
-        val rawData = database.sleepClassifyEventDao().getAllEvents()
+        val rawData = database.sleepClassifyEventDao().getUnprocessedEvents()
         if (rawData.isEmpty()) return
 
         val sleepPeriods = mutableListOf<Pair<Long, Long>>()
@@ -51,7 +51,7 @@ class ProcessSleepDataWorker(appContext: Context, params: WorkerParameters) :
             database.sleepSegmentEventDao().insert(SleepSegmentEventEntity(start, end))
         }
 
-        database.sleepClassifyEventDao().clear()
+        database.sleepClassifyEventDao().markAllAsProcessed()
     }
 
     companion object {

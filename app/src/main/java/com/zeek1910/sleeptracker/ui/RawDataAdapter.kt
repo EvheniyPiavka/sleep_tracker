@@ -35,14 +35,15 @@ class RawDataAdapter : RecyclerView.Adapter<RawDataAdapter.RawDataViewHolder>() 
 
     class RawDataViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val timeStamp = itemView.findViewById<TextView>(R.id.timeStamp)
-        private val motion = itemView.findViewById<TextView>(R.id.motion)
-        private val light = itemView.findViewById<TextView>(R.id.light)
         private val confidence = itemView.findViewById<TextView>(R.id.confidence)
 
         fun bind(event: SleepClassifyEventEntity) {
+            if (event.isProcessed) {
+                itemView.setBackgroundColor(itemView.context.getColor(R.color.processed_item_bg))
+            } else {
+                itemView.setBackgroundColor(itemView.context.getColor(R.color.white))
+            }
             timeStamp.text = "Time: ${Utils.formatDateTime(event.timestampMillis)}"
-            motion.text = "Motion: ${event.motion}"
-            light.text = "Light: ${event.light}"
             confidence.text = "Confidence: ${event.confidence}"
         }
     }
